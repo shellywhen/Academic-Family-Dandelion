@@ -36,7 +36,7 @@ export function getViewportTuning(width: number, height: number): ViewportTuning
       logoPlacement: "bottom-left",
       logoMarginX: 400,
       logoMarginY: 88,
-      nodeScale: 2.5,
+      nodeScale: 0.75,
       nodeRadiusFloor: 6,
       leafRadiusFloor: 8,
       leafNodeScale: 1.35,
