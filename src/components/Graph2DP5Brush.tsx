@@ -6,6 +6,7 @@ import type { NodeT, EdgeT, EdgeLayoutSettings } from "../graph/GraphType";
 import { calculateGraphBounds, buildEdgeCurvePoints } from "../graph/GraphUtils";
 import { isHuaminNode } from "../graph/GraphLayout";
 import { COLORS } from "../constants/colors";
+import { getViewportTuning, type ViewportTuning } from "../utils/viewport";
 
 /** Extra spacing between layout coordinates (positions only, not node radius). */
 const LAYOUT_SPREAD = 1.38;
@@ -19,6 +20,8 @@ const DEBUG_POINTER =
 const FIT_PADDING = 2.85;
 /** Node disk size relative to layout scale (lower = less overlap). */
 const NODE_RADIUS_FACTOR = 0.2;
+/** Default p5.brush pen weight for advisor–student stems. */
+const DEFAULT_STEM_WEIGHT = 0.95;
 
 export type Graph2DP5BrushHandle = {
   exportPng: (filename?: string, scale?: number) => Promise<void>;
@@ -60,6 +63,10 @@ type ViewTransform = {
   radiusScale: number;
   offsetX: number;
   offsetY: number;
+  nodeScale: number;
+  nodeRadiusFloor: number;
+  leafRadiusFloor: number;
+  leafNodeScale: number;
 };
 
 function buildViewTransform(
@@ -71,11 +78,17 @@ function buildViewTransform(
 ): ViewTransform {
   const positionScale = Math.min(width, height) / (bounds.radius * fitPadding);
   const radiusScale = positionScale * 0.78;
+  const { nodeScale, nodeRadiusFloor, leafRadiusFloor, leafNodeScale } =
+    getViewportTuning(width, height);
   return {
     positionScale,
     radiusScale,
     offsetX: -bounds.center.x * positionScale * layoutSpread,
     offsetY: -bounds.center.y * positionScale * layoutSpread,
+    nodeScale,
+    nodeRadiusFloor,
+    leafRadiusFloor,
+    leafNodeScale,
   };
 }
 
@@ -89,21 +102,23 @@ function nodeScreenPosition(
 }
 
 function nodeScreenRadius(node: NodeT, view: ViewTransform): number {
-  let radius = Math.max(node.size * view.radiusScale * NODE_RADIUS_FACTOR, 4);
+  const isLeaf = !isHuaminNode(node) && !node.isRoot && !node.isFaculty;
+  const floor = isLeaf ? view.leafRadiusFloor : view.nodeRadiusFloor;
+  let radius = Math.max(node.size * view.radiusScale * NODE_RADIUS_FACTOR, floor);
   if (isHuaminNode(node)) radius *= 5.2;
   else if (node.isRoot) radius *= 2.2;
   else if (node.isFaculty) radius *= 2.2;
-  else radius *= 1.05;
-  return radius;
+  else radius *= view.leafNodeScale;
+  return radius * view.nodeScale;
 }
 
-/** Hit area — watercolor bleed is far larger than brush.circle() geometric radius. */
+/** Hit area — watercolor bleed extends past the geometric disk. */
 function nodeHitRadius(node: NodeT, view: ViewTransform): number {
   const visual = nodeScreenRadius(node, view);
-  if (isHuaminNode(node)) return Math.max(visual * 1.15, 95);
-  if (node.isRoot) return Math.max(visual * 1.25, 48);
-  if (node.isFaculty) return Math.max(visual * 1.35, 42);
-  return Math.max(visual * 2.5, 34);
+  if (isHuaminNode(node)) return visual * 1.15;
+  if (node.isRoot) return visual * 1.25;
+  if (node.isFaculty) return visual * 1.35;
+  return visual * 2.5;
 }
 
 /** Fallback pick slack — keep small so distant students don't steal hub clicks. */
@@ -483,21 +498,45 @@ function drawBrushText(
   return letterX - startX - letterTracking;
 }
 
-function drawVisLabLogo(font: p5.Font, canvasWidth: number, canvasHeight: number) {
+function drawVisLabLogo(
+  font: p5.Font,
+  canvasWidth: number,
+  canvasHeight: number,
+  tuning: ViewportTuning
+) {
   const word = "VisLab";
-  const wordSize = 96;
-  const letterTracking = 5;
-  const textStartX = -canvasWidth / 2 + 258;
-  const textStartY = canvasHeight / 2 - 236;
-
-  const vislabWidth = drawBrushText(font, word, textStartX, textStartY, wordSize, letterTracking);
-  const vislabCenterX = textStartX + vislabWidth / 2;
-
+  const wordSize = 96 * tuning.logoScale;
+  const letterTracking = 5 * tuning.logoScale;
   const dateSize = wordSize * 0.45;
-  const dateTracking = 4;
+  const dateTracking = 4 * tuning.logoScale;
   const dateLabel = formatVisLabDateLabel();
+
+  // Scene blit flips Y — anchor from canvas top (+Y) to land near the screen bottom.
+  const textStartY =
+    tuning.logoPlacement === "top-left"
+      ? canvasHeight / 2 - tuning.logoMarginY * tuning.logoInsetScale
+      : canvasHeight / 2 - tuning.logoMarginY;
+
+  const vislabWidth = measureBrushTextWidth(font, word, wordSize, letterTracking);
   const dateWidth = measureBrushTextWidth(font, dateLabel, dateSize, dateTracking);
-  const dateStartX = vislabCenterX - dateWidth / 2;
+
+  let textStartX: number;
+  if (tuning.logoPlacement === "bottom-center") {
+    textStartX = -vislabWidth / 2;
+  } else if (tuning.logoPlacement === "bottom-left") {
+    textStartX = -canvasWidth / 2 + tuning.logoMarginX;
+  } else {
+    textStartX = -canvasWidth / 2 + tuning.logoMarginX * tuning.logoInsetScale;
+  }
+
+  drawBrushText(font, word, textStartX, textStartY, wordSize, letterTracking);
+
+  const dateStartX =
+    tuning.logoPlacement === "bottom-center"
+      ? -dateWidth / 2
+      : tuning.logoPlacement === "bottom-left"
+        ? textStartX
+        : textStartX + vislabWidth / 2 - dateWidth / 2;
   const dateStartY = textStartY + wordSize * 0.62;
 
   drawBrushText(font, dateLabel, dateStartX, dateStartY, dateSize, dateTracking);
@@ -527,6 +566,7 @@ function createBrushGraphSketch({
     let canvasW = width;
     let canvasH = height;
     let view = buildViewTransform(bounds, canvasW, canvasH, layoutSpread, fitPadding);
+    let viewportTuning = getViewportTuning(canvasW, canvasH);
     let canvasElement: HTMLCanvasElement | null = null;
     let overlayRegistered = false;
     const pendingRafs: number[] = [];
@@ -614,7 +654,13 @@ function createBrushGraphSketch({
       };
 
       brush.noField();
-      brush.set("pen", COLORS.EDGE, 1.25);
+      brush.set(
+        "pen",
+        COLORS.EDGE,
+        viewportTuning.stemWeight ??
+          plantEdgeSettings.stemWeight ??
+          DEFAULT_STEM_WEIGHT
+      );
       const spread = view.positionScale * layoutSpread;
       edges.forEach((edge) => {
         const sourceNode = nodes.find((n) => n.id === edge.source);
@@ -672,7 +718,7 @@ function createBrushGraphSketch({
       });
 
       if (font) {
-        drawVisLabLogo(font, canvasW, canvasH);
+        drawVisLabLogo(font, canvasW, canvasH, viewportTuning);
       }
     };
 

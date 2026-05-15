@@ -67,6 +67,7 @@ export type NodeData = {
   name: string;
   chi_name: string | null;
   advisor: string;
+  career: string;
   start_year: number;
   graduation_year: number | null;
   graduation_university: string;
@@ -84,30 +85,25 @@ export type NodeData = {
  * @returns Record<number, NodeData>
  */
 export function parseCSVToNodeData(csv: string): Record<number, NodeData> {
-  const jsonObject: Record<number, NodeData> = {}; // Initialize empty object
+  const jsonObject: Record<number, NodeData> = {};
 
-  const rows = csv.trim().split("\n").slice(1); // remove header row
-  if (!rows) return jsonObject; // Return empty object if no data
-
-  rows.forEach((row, index) => {
-    const columns = row.split(",");
-    if (columns.length > 0) {
-      jsonObject[index] = {
-        id: index,
-        name: columns[0],
-        chi_name: columns[1],
-        advisor: columns[2],
-        start_year: parseInt(columns[3], 10),
-        graduation_year: parseOptionalInt(columns[4]),
-        graduation_university: columns[5],
-        faculty_position: columns[6],
-        personal_website: columns[7],
-        other_news: columns[8],
-        doctoral_thesis: columns[9],
-        latitude: parseOptionalFloat(columns[10]),
-        longitude: parseOptionalFloat(columns[11]),
-      };
-    }
+  parseCSV(csv).forEach((row, index) => {
+    jsonObject[index] = {
+      id: index,
+      name: row.Name,
+      chi_name: row["中文名"] || null,
+      advisor: row.Advisor,
+      career: row.Career,
+      start_year: parseInt(row["Starting year"], 10),
+      graduation_year: parseOptionalInt(row["Graduation year"]),
+      graduation_university: row["Graduation university"],
+      faculty_position: row["Faculty position"] || null,
+      personal_website: row["Personal website"] || null,
+      other_news: row["Other news"] || null,
+      doctoral_thesis: row["Doctoral thesis"] || null,
+      latitude: parseOptionalFloat(row.Latitude),
+      longitude: parseOptionalFloat(row.Longitude),
+    };
   });
 
   return jsonObject;

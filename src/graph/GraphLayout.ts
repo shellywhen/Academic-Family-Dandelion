@@ -15,6 +15,7 @@ import type {
   LayoutEntry,
   EdgeT,
 } from "./GraphType";
+import { isFacultyCareer } from "./careerUtils";
 import { clamp, spanBetween, wrapAngle } from "./GraphUtils";
 
 const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2;
@@ -174,6 +175,7 @@ export const LAYOUT_SETTINGS: LayoutSettings = {
     startInsetScale: 1.0,
     endInsetScale: 1.0,
     planarSpiralStrength: 1.8,
+    stemWeight: 0.95,
     lift: 0,
   },
   child: {
@@ -821,7 +823,7 @@ function buildNodes(
     const childCount = structure.children.get(id)?.length ?? 0;
     const hasChildren = childCount > 0;
     const isRoot = id === structure.rootId;
-    const isFaculty = Boolean(base?.details.facultyPosition);
+    const isFaculty = isFacultyCareer(base?.details.career);
 
     const specialCase = getSpecialCaseConfigForNode(id, structure, settings);
     const nodeOverride = specialCase?.node;
@@ -867,10 +869,12 @@ function buildNodes(
       edgeOverride: specialCase?.edge,
       details: {
         advisor: base?.details.advisor,
+        career: base?.details.career,
         startYear: base?.details.startYear,
         graduationYear: base?.details.graduationYear,
         graduationUniversity: base?.details.graduationUniversity,
         facultyPosition: base?.details.facultyPosition,
+        personalWebsite: base?.details.personalWebsite,
         latitude: base?.details.latitude,
         longitude: base?.details.longitude,
       },

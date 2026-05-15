@@ -1,4 +1,5 @@
 import { parseCSVToNodeData, type NodeData } from "../data/CSVReader";
+import { isFacultyCareer } from "./careerUtils";
 import type { EdgeT, GraphDataset, GraphNode } from "./GraphType";
 
 function makeNodeId(
@@ -32,19 +33,23 @@ function createNodeFromRecord(
   const subtitle = record.chi_name?.trim() || undefined;
   const advisor = record.advisor?.trim() || undefined;
   const facultyPosition = record.faculty_position?.trim() || undefined;
+  const career = record.career?.trim() || undefined;
+  const personalWebsite = record.personal_website?.trim() || undefined;
   return {
     id,
     label: record.name,
     subtitle,
     advisorId: undefined,
     isRoot: false,
-    isFaculty: Boolean(facultyPosition),
+    isFaculty: isFacultyCareer(career),
     details: {
       advisor,
+      career,
       startYear: record.start_year ?? undefined,
       graduationYear: record.graduation_year ?? undefined,
       graduationUniversity: record.graduation_university || undefined,
       facultyPosition,
+      personalWebsite,
       latitude: record.latitude ?? undefined,
       longitude: record.longitude ?? undefined,
     },

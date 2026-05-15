@@ -3,12 +3,12 @@ export const COLORS = {
   // Node colors
   SELECTED: "#e84a2e",
   ROOT: "#2a5c56",
-  FACULTY: "#f1939c",
+  FACULTY: "#eea6b7",
   FACULTY_HALO: "#fffceb",
-  STUDENT: "#45b787",
+  STUDENT: "#bacf65",
   
   // Edge colors
-  EDGE: "rgba(47, 95, 92, 0.27)",
+  EDGE: "rgba(48, 100, 97, 0.27)",
   
   // Background colors
   BACKGROUND: "#fffceb",    // Cream background

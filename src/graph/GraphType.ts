@@ -7,10 +7,12 @@ export type SimplePosition = { x: number; y: number; z: number };
 
 export type NodeDetails = {
   advisor?: string;
+  career?: string;
   startYear?: number;
   graduationYear?: number;
   graduationUniversity?: string;
   facultyPosition?: string;
+  personalWebsite?: string;
   latitude?: number;
   longitude?: number;
 };
@@ -60,6 +62,8 @@ export type EdgeLayoutSettings = {
   startInsetScale: number;
   endInsetScale: number;
   planarSpiralStrength: number;
+  /** p5.brush pen weight for advisor–student stems (default 0.95). */
+  stemWeight?: number;
   curvature?: number;
   lift?: number;
 };
