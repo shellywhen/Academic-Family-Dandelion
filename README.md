@@ -2,6 +2,8 @@
 
 Interactive academic family tree rendered with [p5.js](https://p5js.org/) and [p5.brush](https://github.com/acamposuribe/p5.brush) for organic brush-stroke edges and nodes.
 
+![Academic Family Dandelion visualization](demo/image.png)
+
 ## Development
 
 ```bash
