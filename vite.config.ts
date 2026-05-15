@@ -1,12 +1,12 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// GitHub Pages: https://<user>.github.io/Academic-Family-Dandelion/
-export default defineConfig(({ command }) => ({
+// Relative base works for GitHub Pages (/docs) and local preview.
+export default defineConfig({
   plugins: [react()],
-  base: command === "serve" ? "/" : "/Academic-Family-Dandelion/",
+  base: "./",
   build: {
     outDir: "docs",
     emptyOutDir: true,
   },
-}));
+});

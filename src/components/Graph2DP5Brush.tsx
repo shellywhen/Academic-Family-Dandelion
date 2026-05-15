@@ -568,7 +568,7 @@ function createBrushGraphSketch({
     };
 
     p.preload = () => {
-      font = p.loadFont("/fonts/Ubuntu-R.ttf");
+      font = p.loadFont(`${import.meta.env.BASE_URL}fonts/Ubuntu-R.ttf`);
     };
 
     const handleCanvasClick =

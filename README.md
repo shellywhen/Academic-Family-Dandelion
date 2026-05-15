@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open the URL shown in the terminal (usually `http://localhost:5173`). For local dev, if assets fail to load, temporarily set `base: "/"` in `vite.config.ts`.
+Open the URL shown in the terminal (usually `http://localhost:5173`).
 
 ## Build (GitHub Pages)
 
