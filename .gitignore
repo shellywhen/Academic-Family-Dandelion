@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.cache/
+.tmp/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+# macOS / Windows junk
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+Icon?
+
+.vscode/
+.idea/
+*.log
+coverage/
