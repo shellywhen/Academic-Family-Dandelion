@@ -60,6 +60,11 @@ body {
   padding: 0;
 }
 
+/* p5.js preload label — we use the centered VisLab loader instead. */
+#p5_loading {
+  display: none !important;
+}
+
 @supports (height: 100svh) {
   html,
   body,

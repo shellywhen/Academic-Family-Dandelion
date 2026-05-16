@@ -6,7 +6,11 @@ import type { NodeT, EdgeT, EdgeLayoutSettings } from "../graph/GraphType";
 import { calculateGraphBounds, buildEdgeCurvePoints } from "../graph/GraphUtils";
 import { isHuaminNode } from "../graph/GraphLayout";
 import { COLORS } from "../constants/colors";
-import { getViewportTuning, type ViewportTuning } from "../utils/viewport";
+import {
+  getEffectivePixelDensity,
+  getViewportTuning,
+  type ViewportTuning,
+} from "../utils/viewport";
 
 /** Extra spacing between layout coordinates (positions only, not node radius). */
 const LAYOUT_SPREAD = 1.38;
@@ -608,6 +612,7 @@ function createBrushGraphSketch({
     };
 
     p.preload = () => {
+      document.getElementById("p5_loading")?.remove();
       font = p.loadFont(`${import.meta.env.BASE_URL}fonts/Ubuntu-R.ttf`);
     };
 
@@ -632,8 +637,6 @@ function createBrushGraphSketch({
             onSelect(picked);
           }
         : null;
-
-    brush.instance(p);
 
     const paintScene = () => {
       applyOrtho(p, canvasW, canvasH);
@@ -722,7 +725,7 @@ function createBrushGraphSketch({
       }
     };
 
-    const captureScene = () => {
+    const finalizeCapture = () => {
       if (isDisposed?.()) return;
       brush.reBlend();
       sceneImage = p.get() as p5.Image;
@@ -739,6 +742,18 @@ function createBrushGraphSketch({
       }
     };
 
+    const captureScene = () => {
+      if (isDisposed?.()) return;
+      // Let p5.brush afterSetup/post finish compositing fills (mask[2]) + pen (mask[0]).
+      p.redraw();
+      brush.reBlend();
+      pendingRafs.push(
+        requestAnimationFrame(() => {
+          pendingRafs.push(requestAnimationFrame(finalizeCapture));
+        })
+      );
+    };
+
     const scheduleCapture = () => {
       pendingRafs.forEach((id) => cancelAnimationFrame(id));
       pendingRafs.length = 0;
@@ -746,7 +761,11 @@ function createBrushGraphSketch({
         requestAnimationFrame(() => {
           pendingRafs.push(
             requestAnimationFrame(() => {
-              pendingRafs.push(requestAnimationFrame(captureScene));
+              pendingRafs.push(
+                requestAnimationFrame(() => {
+                  pendingRafs.push(requestAnimationFrame(captureScene));
+                })
+              );
             })
           );
         })
@@ -756,6 +775,7 @@ function createBrushGraphSketch({
     p.setup = () => {
       p.setAttributes("preserveDrawingBuffer", true);
       const canvas = p.createCanvas(canvasW, canvasH, p.WEBGL);
+      brush.instance(p);
       canvasElement = canvas.elt;
       p.pixelDensity(pixelDensity);
       p.smooth();
@@ -767,6 +787,7 @@ function createBrushGraphSketch({
       canvas.elt.style.imageRendering = "auto";
 
       paintScene();
+      // Wait for p5.brush afterSetup/post to flush stroke masks before baking sceneImage.
       scheduleCapture();
 
       const originalRemove = p.remove.bind(p);
@@ -776,6 +797,7 @@ function createBrushGraphSketch({
         if (handleCanvasClick) {
           canvasElement?.removeEventListener("click", handleCanvasClick);
         }
+        brush.remove(false);
         originalRemove();
       };
     };
@@ -891,6 +913,7 @@ export const Graph2DP5Brush = forwardRef<Graph2DP5BrushHandle, Graph2DP5BrushPro
     []
   );
 
+
   useEffect(() => {
     if (!containerRef.current) return;
     const bounds = calculateGraphBounds(nodes.map((node) => ({ ...node, z: 0 })));
@@ -907,7 +930,7 @@ export const Graph2DP5Brush = forwardRef<Graph2DP5BrushHandle, Graph2DP5BrushPro
       layoutSpread,
       fitPadding,
       bounds,
-      pixelDensity: 2,
+      pixelDensity: getEffectivePixelDensity(width, height),
       interactive: true,
       onSelect: (index) => onSelectRef.current(index),
       getSelected: () => selectedRef.current,

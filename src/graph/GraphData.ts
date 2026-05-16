@@ -25,12 +25,27 @@ function normalizeName(value: string | null | undefined): string | undefined {
   return trimmed.toLowerCase();
 }
 
+function normalizeChiName(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed.toLowerCase() === "none") return undefined;
+  return trimmed;
+}
+
+/** English name, then 中文名 when present (e.g. "Huamin Qu 屈华民"). */
+export function formatNodeDisplayLabel(
+  label: string,
+  subtitle?: string | null
+): string {
+  const chi = normalizeChiName(subtitle);
+  return chi ? `${label} ${chi}` : label;
+}
+
 function createNodeFromRecord(
   record: NodeData,
   idUsage: Map<string, number>
 ): GraphNode {
   const id = makeNodeId(record.name, record.start_year ?? null, idUsage);
-  const subtitle = record.chi_name?.trim() || undefined;
+  const subtitle = normalizeChiName(record.chi_name);
   const advisor = record.advisor?.trim() || undefined;
   const facultyPosition = record.faculty_position?.trim() || undefined;
   const career = record.career?.trim() || undefined;

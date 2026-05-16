@@ -1,5 +1,18 @@
 export const COMPACT_BREAKPOINT = 768;
 
+/** Keep WebGL / p5.brush mask buffers under common GPU texture limits. */
+const MAX_CANVAS_PIXELS = 4096;
+
+export function getEffectivePixelDensity(
+  width: number,
+  height: number,
+  desired = 2
+): number {
+  const maxSide = Math.max(width, height);
+  if (maxSide <= 0) return 1;
+  return Math.min(desired, Math.max(1, MAX_CANVAS_PIXELS / maxSide));
+}
+
 export function isCompactViewport(width: number, height: number): boolean {
   return Math.min(width, height) < COMPACT_BREAKPOINT;
 }

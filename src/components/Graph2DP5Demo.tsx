@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Graph2DP5Brush, type Graph2DP5BrushHandle } from "./Graph2DP5Brush";
 import type { GraphDataset } from "../graph/GraphType";
 import { useStoredGraph } from "../AppState";
+import { formatNodeDisplayLabel } from "../graph/GraphData";
 import { buildGraphLayout } from "../graph/GraphLayout";
 import { COLORS } from "../constants/colors";
 import { isCompactViewport } from "../utils/viewport";
@@ -11,7 +12,7 @@ const PAGE_MARGIN_Y = 20;
 function formatCareer(career?: string): string | null {
   const trimmed = career?.trim();
   if (!trimmed) return null;
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
 function normalizeWebsiteUrl(url: string): string {
@@ -132,6 +133,10 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
     setHasRenderedOnce(true);
   }, []);
 
+  useEffect(() => {
+    setIsCanvasReady(false);
+  }, [renderSize.width, renderSize.height]);
+
   const handleNodeSelect = useCallback((index: number | null) => {
     setSelectedNode(index);
   }, []);
@@ -157,8 +162,8 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
   const controlSurfaceStyle = {
     borderRadius: compact ? "8px" : "10px",
     border: compact
-      ? "1px solid rgba(139, 154, 70, 0.45)"
-      : "2px solid rgba(139, 154, 70, 0.5)",
+      ? `1px solid ${COLORS.BUTTON_BORDER}`
+      : `2px solid ${COLORS.BUTTON_BORDER}`,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     color: COLORS.TEXT_PRIMARY,
     fontSize: compact ? "12px" : "14px",
@@ -189,6 +194,14 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
   const websiteUrl = selected?.details.personalWebsite
     ? normalizeWebsiteUrl(selected.details.personalWebsite)
     : null;
+  const selectedDisplayName = selected
+    ? formatNodeDisplayLabel(selected.label, selected.subtitle)
+    : null;
+  const advisorNode =
+    selected?.advisorId && graph
+      ? graph.nodes.find((n) => n.id === selected.advisorId)
+      : undefined;
+  const advisorDisplayName = advisorNode?.label ?? "Unknown";
 
   return (
     <div
@@ -213,6 +226,7 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
         >
           {hasCanvasSize && (
             <Graph2DP5Brush
+              key={`${pixelSize.width}x${pixelSize.height}`}
               ref={graphRef}
               nodes={graph.nodes}
               edges={graph.edges}
@@ -273,7 +287,7 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
                   >
                     <span style={{
                       fontWeight: 600
-                    }}>{selected.label}</span>
+                    }}>{selectedDisplayName}</span>
                     {websiteUrl && <WebsiteLinkIcon href={websiteUrl} compact={compact} />}
                   </div>
                   {roleLabel && <div style={detailLineStyle}>{roleLabel}</div>}
@@ -283,7 +297,7 @@ export function Graph2DP5Demo({ dataset: propDataset }: Graph2DP5DemoProps) {
                   {selected.advisorId && (
                     <div style={detailLineStyle}>
                       Advisor:{" "}
-                      {graph.nodes.find((n) => n.id === selected.advisorId)?.label ?? "Unknown"}
+                      {advisorDisplayName}
                     </div>
                   )}
                   {selected.details.startYear != null && (

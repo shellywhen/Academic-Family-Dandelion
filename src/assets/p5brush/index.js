@@ -104,18 +104,38 @@ export function load(canvasID = false) {
   _isLoaded = true;
 }
 
+function safeRemoveMask(mask) {
+  if (!mask) return;
+  try {
+    mask.remove();
+  } catch {
+    // Mask may belong to a disposed p5 instance (Vite HMR / React remount).
+  }
+}
+
+function resetBrushRuntimeState() {
+  _isReady = false;
+  _isLoaded = false;
+  Mix.loaded = false;
+  Mix.isBlending = false;
+  Mix.blending1 = false;
+  Mix.blending2 = false;
+}
+
 /**
  * Removes brush buffers
  */
 export function remove(a = true) {
-  if (_isReady) {
-    Mix.masks[0].remove();
-    Mix.masks[0] = null;
-    Mix.masks[1].remove();
-    Mix.masks[1] = null;
-    Mix.masks[2].remove();
-    Mix.masks[2] = null;
-    if (a) brush.load();
+  const hadMasks = Boolean(Mix.masks?.some((mask) => mask));
+  if (_isReady || hadMasks) {
+    if (Mix.masks) {
+      for (let i = 0; i < Mix.masks.length; i += 1) {
+        safeRemoveMask(Mix.masks[i]);
+        Mix.masks[i] = null;
+      }
+    }
+    resetBrushRuntimeState();
+    if (a) load();
   }
 }
 
